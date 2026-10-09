@@ -1,0 +1,102 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, changeset-release/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  DO_NOT_TRACK: "1"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup runtime
+        uses: savvy-web/silk-runtime-action@v1
+        with:
+          install-deps: "true"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Lint markdown
+        run: pnpm lint:md
+
+      # The gate is the `Tests:` line, not the exit code: a project-filtered run
+      # that collects nothing prints `0/0 passed` and exits 0. `ci:test` runs the
+      # whole suite with coverage and without `--pass-with-no-tests`, so an empty
+      # or uncollected suite fails here rather than reporting green.
+      - name: Test
+        run: pnpm ci:test
+
+      - name: Validate action.yml against the built entries
+        run: pnpm validate
+
+  dist-freshness:
+    name: dist freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup runtime
+        uses: savvy-web/silk-runtime-action@v1
+        with:
+          install-deps: "true"
+
+      # `dist/` and `.github/actions/local/` are COMMITTED — the runner executes
+      # them, not `src/`. vitest runs source, so the suite can never see a stale
+      # bundle: without this gate a merged source change ships an action that
+      # still behaves like the previous commit, and nothing reports it.
+      - name: Rebuild the committed bundles
+        run: pnpm build
+
+      - name: Fail if the committed bundles are stale
+        run: |
+          if ! git diff --quiet --exit-code -- dist .github/actions/local; then
+            echo "::error::dist/ or .github/actions/local/ is out of date. Run \`pnpm build\` and commit the result."
+            git --no-pager diff --stat -- dist .github/actions/local
+            exit 1
+          fi
+          echo "Committed bundles match a fresh build."
+
+  schema-freshness:
+    name: schema freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup runtime
+        uses: savvy-web/silk-runtime-action@v1
+        with:
+          install-deps: "true"
+
+      # `schemastore check` is the identical walk to `schemastore build` with no
+      # writes. It exits 1 when a build would write anything (a stale or missing
+      # document), when a published label's contract drifted (bump the version,
+      # never force), or when the ajv strict gate or structural lint fails —
+      # and it appends a report table to the job's step summary.
+      - name: Check the published JSON Schema
+        run: pnpm schema:check

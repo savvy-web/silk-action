@@ -1,0 +1,73 @@
+{
+	"name": "@savvy-web/github-action-template",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Template repository for building a GitHub Marketplace action on the @effected Effect v4 kit with @savvy-web/github-action-builder.",
+	"homepage": "https://github.com/savvy-web/github-action-template#readme",
+	"bugs": {
+		"url": "https://github.com/savvy-web/github-action-template/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/savvy-web/github-action-template.git"
+	},
+	"license": "MIT",
+	"author": "Savvy Web Systems <spencer@savvyweb.systems> (https://savvyweb.systems)",
+	"type": "module",
+	"scripts": {
+		"build": "turbo run build:prod --log-order=grouped",
+		"build:prod": "github-action-builder build",
+		"changeset": "changeset",
+		"ci:build": "CI=\"true\" turbo run build:prod --log-order=grouped --output-logs=full",
+		"ci:test": "CI=\"true\" vitest run --coverage",
+		"ci:version": "savvy changeset version && biome format --write .",
+		"claude": "claude --plugin-dir=../../spencerbeggs/effected/plugins/claude-code",
+		"lint": "biome check --max-diagnostics=none",
+		"lint:fix": "biome check --write --max-diagnostics=none",
+		"lint:fix:unsafe": "biome check --write --unsafe --max-diagnostics=none",
+		"lint:md": "markdownlint-cli2 --config './lib/configs/.markdownlint-cli2.jsonc'",
+		"lint:md:fix": "markdownlint-cli2  --config './lib/configs/.markdownlint-cli2.jsonc' --fix",
+		"local": "node lib/scripts/run-local.ts",
+		"prepare": "husky",
+		"schema:build": "schemastore build",
+		"schema:check": "schemastore check",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"test:watch": "vitest --watch",
+		"typecheck": "turbo run types:check --log-prefix=none --log-order=grouped",
+		"types:check": "tsc --noEmit",
+		"validate": "github-action-builder validate"
+	},
+	"dependencies": {
+		"@effect/platform-node": "catalog:effect",
+		"@effected/github-actions": "catalog:effected",
+		"@effected/schemastore": "catalog:effected",
+		"effect": "catalog:effect"
+	},
+	"devDependencies": {
+		"@effect/vitest": "catalog:effect",
+		"@effected/schemastore-cli": "catalog:effected",
+		"@effected/yaml": "catalog:effected",
+		"@okfit/plugin": "^0.5.14",
+		"@savvy-web/github-action-builder": "^2.4.13",
+		"@savvy-web/silk": "^4.3.6",
+		"@vitest-agent/plugin": "^5.4.0"
+	},
+	"engines": {
+		"node": ">=24.11.0"
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "12.10.1",
+			"onFail": "download"
+		},
+		"runtime": [
+			{
+				"name": "node",
+				"version": "26.10.0",
+				"onFail": "ignore"
+			}
+		]
+	}
+}
